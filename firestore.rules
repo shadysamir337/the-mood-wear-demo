@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// THE MOOD — who can read and write what.
+// Money and stock (orders, promo usage, counters) are only ever written by Cloud Functions.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function role() { return signedIn() ? request.auth.token.get('role', '') : ''; }
+    function isStaff() { return role() in ['owner', 'admin', 'staff']; }
+    function isAdmin() { return role() in ['owner', 'admin']; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function changes() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function stamped() { return request.resource.data.updatedBy == request.auth.token.email; }
+
+    // ---------- catalog: public reads, admin writes ----------
+    match /products/{id} {
+      allow read: if resource.data.status == 'active' || isStaff();
+      allow create, delete: if isAdmin();
+      allow update: if (isAdmin() && stamped())
+        || (isStaff() && stamped() && changes().hasOnly(['variants', 'updatedAt', 'updatedBy']));
+    }
+    match /moods/{id} {
+      allow read: if resource.data.visible == true || isStaff();
+      allow write: if isAdmin();
+    }
+    match /sales/{id} {
+      allow read: if resource.data.active == true || isStaff();
+      allow write: if isAdmin();
+    }
+    match /banners/{id} {
+      allow read: if resource.data.active == true || isStaff();
+      allow write: if isAdmin();
+    }
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin() && id == 'store';
+    }
+
+    // ---------- private store data ----------
+    match /promos/{code} {
+      allow read: if isStaff();
+      allow create: if isAdmin() && code == request.resource.data.code && request.resource.data.usedCount == 0;
+      allow update: if isAdmin() && !('usedCount' in changes()) && request.resource.data.code == resource.data.code;
+      allow delete: if isAdmin();
+    }
+    match /orders/{id} {
+      allow read: if isStaff() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow write: if false;
+    }
+    match /customers/{id} {
+      allow read: if isStaff();
+      allow update: if isStaff() && changes().hasOnly(['notes', 'tags', 'updatedAt', 'updatedBy']);
+      allow create, delete: if false;
+    }
+    match /subscribers/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /restockAlerts/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /auditLog/{id} { allow read: if isAdmin(); allow write: if false; }
+    match /staff/{uid} { allow read: if isAdmin() || isOwner(uid); allow write: if false; }
+    match /counters/{id} { allow read, write: if false; }
+    match /rateLimits/{id} { allow read, write: if false; }
+
+    // ---------- reviews: created by function, moderated by staff ----------
+    match /reviews/{id} {
+      allow read: if resource.data.status == 'approved' || isStaff() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isStaff() && changes().hasOnly(['status', 'reply', 'updatedAt', 'updatedBy'])
+        && request.resource.data.status in ['pending', 'approved', 'rejected'];
+      allow delete: if isAdmin();
+      allow create: if false;
+    }
+
+    // ---------- customers' own data ----------
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isStaff();
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['name', 'phone', 'email', 'addresses', 'createdAt', 'updatedAt'])
+        && (!('addresses' in request.resource.data) || request.resource.data.addresses.size() <= 5)
+        && (!('name' in request.resource.data) || request.resource.data.name.size() <= 80);
+      allow delete: if isOwner(uid);
+    }
+    match /wishlists/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['productIds', 'updatedAt'])
+        && request.resource.data.productIds is list && request.resource.data.productIds.size() <= 200;
+    }
+  }
+}

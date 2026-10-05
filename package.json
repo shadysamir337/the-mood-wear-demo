@@ -1,0 +1,51 @@
+{
+  "name": "the-mood-wear",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "test:firebase": "npm --prefix functions run sync-shared && firebase emulators:exec --project demo-the-mood --only auth,firestore,functions \"vitest run -c vitest.firebase.config.js\"",
+    "emulators": "npm --prefix functions run sync-shared && firebase emulators:start --project demo-the-mood",
+    "seed:emulator": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-the-mood npm --prefix functions run seed",
+    "e2e:firebase": "npm --prefix functions run sync-shared && firebase emulators:exec --project demo-the-mood --only auth,firestore,functions,storage \"playwright test -c playwright.firebase.config.js\"",
+    "build:seo": "vite build && node scripts/prerender.mjs",
+    "images": "node scripts/optimize-images.mjs"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
+    "@tanstack/react-query": "^5.104.1",
+    "firebase": "^12.19.0",
+    "framer-motion": "^14.0.0",
+    "lenis": "^1.3.26",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-hook-form": "^7.89.0",
+    "react-router-dom": "^7.18.4",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "firebase-admin": "^14.5.0",
+    "firebase-tools": "^15.32.1",
+    "jsdom": "^29.1.1",
+    "oxlint": "^1.81.0",
+    "sharp": "^0.35.5",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.3"
+  }
+}
