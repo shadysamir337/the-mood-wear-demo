@@ -13,7 +13,7 @@
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
-    "predeploy": ["npm run build:seo"],
+    
     "cleanUrls": true,
     "rewrites": [{ "source": "**", "destination": "/app.html" }],
     "headers": [
@@ -36,3 +36,4 @@
     "singleProjectMode": true
   }
 }
+
